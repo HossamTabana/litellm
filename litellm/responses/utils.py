@@ -1,4 +1,4 @@
-from typing import Any, Dict, cast, get_type_hints
+from typing import Any, Dict, Union, cast, get_type_hints
 
 import litellm
 from litellm.llms.base_llm.responses.transformation import BaseResponsesAPIConfig
@@ -60,7 +60,7 @@ class ResponsesAPIRequestUtils:
 
     @staticmethod
     def get_requested_response_api_optional_param(
-        params: Dict[str, Any]
+        params: Dict[str, Any],
     ) -> ResponsesAPIOptionalRequestParams:
         """
         Filter parameters to only include those defined in ResponsesAPIOptionalRequestParams.
@@ -72,22 +72,30 @@ class ResponsesAPIRequestUtils:
             ResponsesAPIOptionalRequestParams instance with only the valid parameters
         """
         valid_keys = get_type_hints(ResponsesAPIOptionalRequestParams).keys()
-        filtered_params = {k: v for k, v in params.items() if k in valid_keys}
+        filtered_params = {
+            k: v for k, v in params.items() if k in valid_keys and v is not None
+        }
         return cast(ResponsesAPIOptionalRequestParams, filtered_params)
 
 
 class ResponseAPILoggingUtils:
     @staticmethod
-    def _is_response_api_usage(usage: dict) -> bool:
+    def _is_response_api_usage(usage: Union[dict, ResponseAPIUsage]) -> bool:
         """returns True if usage is from OpenAI Response API"""
+        if isinstance(usage, ResponseAPIUsage):
+            return True
         if "input_tokens" in usage and "output_tokens" in usage:
             return True
         return False
 
     @staticmethod
-    def _transform_response_api_usage_to_chat_usage(usage: dict) -> Usage:
+    def _transform_response_api_usage_to_chat_usage(
+        usage: Union[dict, ResponseAPIUsage],
+    ) -> Usage:
         """Tranforms the ResponseAPIUsage object to a Usage object"""
-        response_api_usage: ResponseAPIUsage = ResponseAPIUsage(**usage)
+        response_api_usage: ResponseAPIUsage = (
+            ResponseAPIUsage(**usage) if isinstance(usage, dict) else usage
+        )
         prompt_tokens: int = response_api_usage.input_tokens or 0
         completion_tokens: int = response_api_usage.output_tokens or 0
         return Usage(

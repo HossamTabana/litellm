@@ -10,6 +10,9 @@ from litellm.constants import request_timeout
 from litellm.litellm_core_utils.litellm_logging import Logging as LiteLLMLoggingObj
 from litellm.llms.base_llm.responses.transformation import BaseResponsesAPIConfig
 from litellm.llms.custom_httpx.llm_http_handler import BaseLLMHTTPHandler
+from litellm.responses.litellm_completion_transformation.handler import (
+    LiteLLMCompletionTransformationHandler,
+)
 from litellm.responses.utils import ResponsesAPIRequestUtils
 from litellm.types.llms.openai import (
     Reasoning,
@@ -29,6 +32,7 @@ from .streaming_iterator import BaseResponsesAPIStreamingIterator
 ####### ENVIRONMENT VARIABLES ###################
 # Initialize any necessary instances or variables here
 base_llm_http_handler = BaseLLMHTTPHandler()
+litellm_completion_transformation_handler = LiteLLMCompletionTransformationHandler()
 #################################################
 
 
@@ -165,13 +169,16 @@ def responses(
 
         # get llm provider logic
         litellm_params = GenericLiteLLMParams(**kwargs)
-        model, custom_llm_provider, dynamic_api_key, dynamic_api_base = (
-            litellm.get_llm_provider(
-                model=model,
-                custom_llm_provider=custom_llm_provider,
-                api_base=litellm_params.api_base,
-                api_key=litellm_params.api_key,
-            )
+        (
+            model,
+            custom_llm_provider,
+            dynamic_api_key,
+            dynamic_api_base,
+        ) = litellm.get_llm_provider(
+            model=model,
+            custom_llm_provider=custom_llm_provider,
+            api_base=litellm_params.api_base,
+            api_key=litellm_params.api_key,
         )
 
         # get provider config
@@ -182,13 +189,6 @@ def responses(
             )
         )
 
-        if responses_api_provider_config is None:
-            raise litellm.BadRequestError(
-                model=model,
-                llm_provider=custom_llm_provider,
-                message=f"Responses API not available for custom_llm_provider={custom_llm_provider}, model: {model}",
-            )
-
         local_vars.update(kwargs)
         # Get ResponsesAPIOptionalRequestParams with only valid parameters
         response_api_optional_params: ResponsesAPIOptionalRequestParams = (
@@ -196,6 +196,17 @@ def responses(
                 local_vars
             )
         )
+
+        if responses_api_provider_config is None:
+            return litellm_completion_transformation_handler.response_api_handler(
+                model=model,
+                input=input,
+                responses_api_request=response_api_optional_params,
+                custom_llm_provider=custom_llm_provider,
+                _is_async=_is_async,
+                stream=stream,
+                **kwargs,
+            )
 
         # Get optional parameters for the responses API
         responses_api_request_params: Dict = (
@@ -232,6 +243,9 @@ def responses(
             timeout=timeout or request_timeout,
             _is_async=_is_async,
             client=kwargs.get("client"),
+            fake_stream=responses_api_provider_config.should_fake_stream(
+                model=model, stream=stream, custom_llm_provider=custom_llm_provider
+            ),
         )
 
         return response
