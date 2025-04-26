@@ -102,9 +102,17 @@ const sidebars = {
             "proxy/admin_ui_sso",
             "proxy/self_serve",
             "proxy/public_teams",
+            "tutorials/scim_litellm",
             "proxy/custom_sso",
             "proxy/ui_credentials",
-            "proxy/ui_logs"
+            {
+              type: "category",
+              label: "UI Logs",
+              items: [
+                "proxy/ui_logs",
+                "proxy/ui_logs_sessions"
+              ]
+            }
           ],
         },
         {
@@ -410,6 +418,7 @@ const sidebars = {
       type: "category",
       label: "Logging & Observability",
       items: [
+        "observability/agentops_integration",
         "observability/langfuse_integration",
         "observability/lunary_integration",
         "observability/mlflow",

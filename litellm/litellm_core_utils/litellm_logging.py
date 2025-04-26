@@ -36,6 +36,7 @@ from litellm.cost_calculator import (
     RealtimeAPITokenUsageProcessor,
     _select_model_name_for_cost_calc,
 )
+from litellm.integrations.agentops import AgentOps
 from litellm.integrations.anthropic_cache_control_hook import AnthropicCacheControlHook
 from litellm.integrations.arize.arize import ArizeLogger
 from litellm.integrations.custom_guardrail import CustomGuardrail
@@ -247,7 +248,7 @@ class Logging(LiteLLMLoggingBaseClass):
         self.start_time = start_time  # log the call start time
         self.call_type = call_type
         self.litellm_call_id = litellm_call_id
-        self.litellm_trace_id = litellm_trace_id
+        self.litellm_trace_id: str = litellm_trace_id or str(uuid.uuid4())
         self.function_id = function_id
         self.streaming_chunks: List[Any] = []  # for generating complete stream response
         self.sync_streaming_chunks: List[Any] = (
@@ -2685,7 +2686,15 @@ def _init_custom_logger_compatible_class(  # noqa: PLR0915
     """
     try:
         custom_logger_init_args = custom_logger_init_args or {}
-        if logging_integration == "lago":
+        if logging_integration == "agentops":  # Add AgentOps initialization
+            for callback in _in_memory_loggers:
+                if isinstance(callback, AgentOps):
+                    return callback  # type: ignore
+
+            agentops_logger = AgentOps()
+            _in_memory_loggers.append(agentops_logger)
+            return agentops_logger  # type: ignore
+        elif logging_integration == "lago":
             for callback in _in_memory_loggers:
                 if isinstance(callback, LagoLogger):
                     return callback  # type: ignore
@@ -3490,6 +3499,21 @@ class StandardLoggingPayloadSetup:
         else:
             return end_time_float - start_time_float
 
+    @staticmethod
+    def _get_standard_logging_payload_trace_id(
+        logging_obj: Logging,
+        litellm_params: dict,
+    ) -> str:
+        """
+        Returns the `litellm_trace_id` for this request
+
+        This helps link sessions when multiple requests are made in a single session
+        """
+        dynamic_trace_id = litellm_params.get("litellm_trace_id")
+        if dynamic_trace_id:
+            return str(dynamic_trace_id)
+        return logging_obj.litellm_trace_id
+
 
 def get_standard_logging_object_payload(
     kwargs: Optional[dict],
@@ -3642,7 +3666,10 @@ def get_standard_logging_object_payload(
 
         payload: StandardLoggingPayload = StandardLoggingPayload(
             id=str(id),
-            trace_id=kwargs.get("litellm_trace_id"),  # type: ignore
+            trace_id=StandardLoggingPayloadSetup._get_standard_logging_payload_trace_id(
+                logging_obj=logging_obj,
+                litellm_params=litellm_params,
+            ),
             call_type=call_type or "",
             cache_hit=cache_hit,
             stream=stream,

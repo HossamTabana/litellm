@@ -1,5 +1,5 @@
 ---
-title: v1.67.0-stable - Unified Responses API
+title: v1.67.0-stable - SCIM Integration
 slug: v1.67.0-stable
 date: 2025-04-19T10:00:00
 authors:
@@ -21,12 +21,19 @@ import TabItem from '@theme/TabItem';
 
 ## Key Highlights
 
-- **Team and Tag based usage tracking**: You can now see usage and spend by team and tag at 1M+ spend logs.
 - **SCIM Integration**: Enables identity providers (Okta, Azure AD, OneLogin, etc.) to automate user and team (group) provisioning, updates, and deprovisioning
+- **Team and Tag based usage tracking**: You can now see usage and spend by team and tag at 1M+ spend logs.
 - **Unified Responses API**: Support for calling Anthropic, Gemini, Groq, etc. via OpenAI's new Responses API.
 
 Let's dive in.
 
+## SCIM Integration
+
+<Image img={require('../../img/scim_integration.png')}/>
+
+This release adds SCIM support to LiteLLM. This allows your SSO provider (Okta, Azure AD, etc) to automatically create/delete users, teams, and memberships on LiteLLM. This means that when you remove a team on your SSO provider, your SSO provider will automatically delete the corresponding team on LiteLLM. 
+
+[Read more](../../docs/tutorials/scim_litellm)
 ## Team and Tag based usage tracking
 
 <Image img={require('../../img/release_notes/new_team_usage_highlight.jpg')}/>
@@ -34,12 +41,22 @@ Let's dive in.
 
 This release improves team and tag based usage tracking at 1m+ spend logs, making it easy to monitor your LLM API Spend in production. This covers:
 
-- **Admins** can view spend across all teams + tags
-- **Admins** can now see spend across multiple tags
-- **Admins** can now check the activity by key, within teams
-- **Internal Users** can now view spend of teams they’re a member of
+- View **daily spend** by teams + tags
+- View **usage / spend by key**, within teams
+- View **spend by multiple tags**
+- Allow **internal users** to view spend of teams they're a member of
 
 [Read more](#management-endpoints--ui)
+
+## Unified Responses API
+
+This release allows you to call Azure OpenAI, Anthropic, AWS Bedrock, and Google Vertex AI models via the POST /v1/responses endpoint on LiteLLM. This means you can now use popular tools like [OpenAI Codex](https://docs.litellm.ai/docs/tutorials/openai_codex) with your own models. 
+
+<Image img={require('../../img/release_notes/unified_responses_api_rn.png')}/>
+
+
+[Read more](https://docs.litellm.ai/docs/response_api)
+
 
 ## New Models / Updated Models
 
@@ -116,7 +133,7 @@ This release improves team and tag based usage tracking at 1m+ spend logs, makin
 - **API Playground**
     1. Allow internal user to call api playground - [PR](https://github.com/BerriAI/litellm/pull/10157)
 - **SCIM**
-    1. Add LiteLLM SCIM Integration for Team and User management - [Get Started](ADD DOCS HERE), [PR](https://github.com/BerriAI/litellm/pull/10072)
+    1. Add LiteLLM SCIM Integration for Team and User management - [Get Started](../../docs/tutorials/scim_litellm), [PR](https://github.com/BerriAI/litellm/pull/10072)
 
 
 ## Logging / Guardrail Integrations
